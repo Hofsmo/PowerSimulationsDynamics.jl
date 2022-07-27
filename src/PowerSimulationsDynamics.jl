@@ -45,6 +45,11 @@ export get_field_current_series
 export get_setpoints
 export get_solution
 
+# Exports for testing eigenvalue sensitivities
+export SimulationInputs
+export set_operating_point!
+
+
 ####################################### Package Imports ####################################
 import Logging
 import InfrastructureSystems
