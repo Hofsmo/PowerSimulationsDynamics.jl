@@ -181,6 +181,16 @@ shaft_fivemass() = FiveMassShaft(
 
 pss_none() = PSSFixed(0.0)
 
+pss_stab1() = PSY.STAB1(
+    KT = 6.0,
+    T = 1.5,
+    T1T3 = 13.3,
+    T3 = 0.0447,
+    T2T4 = 13.3,
+    T4 = 0.0447,
+    H_lim = 0.2,
+)
+
 ######## TG Data #########
 
 tg_none() = TGFixed(1.0) #eff
@@ -235,6 +245,19 @@ avr_type2() = AVRTypeII(
     0.0, #Ae - 1st ceiling coefficient
     0.0,
 ) #Be - 2nd ceiling coefficient
+
+avr_exst1() = PSY.EXST1(
+    Tr = 0.01,
+    Vi_lim = (-5.0, 5.0),
+    Tc = 10.0,
+    Tb = 20.0,
+    Ka = 200.0,
+    Ta = 0.1,
+    Vr_lim = (0.0, 6.0),
+    Kc = 0.0,
+    Kf = 0.0,
+    Tf = 0.1,
+)
 
 ######################################
 ############# Inverters ##############
@@ -475,6 +498,34 @@ converter_regca() = RenewableEnergyConverterTypeA(
 )
 
 filt_current() = RLFilter(rf = 0.0, lf = 0.0)
+
+####### Loads ########
+
+Ind_Motor(load) = PSY.SingleCageInductionMachine(
+    name = PSY.get_name(load),
+    R_s = 0.013,
+    R_r = 0.009,
+    X_ls = 0.067,
+    X_lr = 0.17,
+    X_m = 3.8,
+    H = 1.5,
+    A = 1.0,
+    B = 0.0,
+    base_power = 1000.0,
+)
+
+Ind_Motor3rd(load) = PSY.SimplifiedSingleCageInductionMachine(
+    name = PSY.get_name(load),
+    R_s = 0.013,
+    R_r = 0.009,
+    X_ls = 0.067,
+    X_lr = 0.17,
+    X_m = 3.8,
+    H = 1.5,
+    A = 1.0,
+    B = 0.0,
+    base_power = 1000.0,
+)
 
 ####### Devices #######
 

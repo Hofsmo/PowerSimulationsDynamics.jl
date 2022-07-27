@@ -589,13 +589,13 @@ end
         )
 
         # Test Initial Condition
-        diff = [0.0]
+        diff_val = [0.0]
         res = get_init_values_for_comparison(sim)
         for (k, v) in test01_x0_init
-            diff[1] += LinearAlgebra.norm(res[k] - v)
+            diff_val[1] += LinearAlgebra.norm(res[k] - v)
         end
 
-        @test (diff[1] < 1e-3)
+        @test (diff_val[1] < 1e-3)
 
         # Obtain small signal results for initial conditions
         small_sig = small_signal_analysis(sim)
@@ -620,4 +620,37 @@ end
         @info("removing test files")
         rm(path, force = true, recursive = true)
     end
+end
+
+@testset "Test 01 OMIB AVR Error" begin
+    # Define Classic OMIB with different AVR
+    omib_sys_error = System(omib_file_dir, runchecks = false)
+    add_source_to_ref(omib_sys_error)
+    ############### Data Dynamic devices ########################
+    function dyn_gen_error(generator)
+        return DynamicGenerator(
+            name = get_name(generator),
+            ω_ref = 1.0,
+            machine = machine_classic(),
+            shaft = shaft_damping(),
+            avr = avr_type1(),
+            prime_mover = tg_none(),
+            pss = pss_none(),
+        )
+    end
+    #Attach dynamic generator. Currently use PSS/e format based on bus #.
+    gen = [g for g in get_components(Generator, omib_sys_error)][1]
+    case_gen = dyn_gen_error(gen)
+    add_component!(omib_sys_error, case_gen, gen)
+
+    @test_throws ErrorException PSID.DynamicWrapper(
+        gen,
+        case_gen,
+        1,
+        1:6,
+        1:6,
+        1:9,
+        100.0,
+        60.0,
+    )
 end

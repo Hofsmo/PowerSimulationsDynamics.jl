@@ -1,6 +1,21 @@
+function isvalid_device(
+    device::PSY.DynamicGenerator{M, S, A, TG, P},
+) where {M <: PSY.Machine, S <: PSY.Shaft, A <: PSY.AVR, TG <: PSY.TurbineGov, P <: PSY.PSS}
+    if M == PSY.BaseMachine && A != PSY.AVRFixed
+        error("Device $(PSY.get_name(device)) uses a BaseMachine model with an AVR")
+    end
+    return
+end
+
+function isvalid_device(::PSY.DynamicInjection)
+    return
+end
+
 get_inner_vars_count(::PSY.DynamicGenerator) = GEN_INNER_VARS_SIZE
 get_inner_vars_count(::PSY.DynamicInverter) = INV_INNER_VARS_SIZE
 get_inner_vars_count(::PSY.PeriodicVariableSource) = 0
+get_inner_vars_count(::PSY.SingleCageInductionMachine) = 0
+get_inner_vars_count(::PSY.SimplifiedSingleCageInductionMachine) = 0
 
 index(::Type{<:PSY.TurbineGov}) = 1
 index(::Type{<:PSY.PSS}) = 2
@@ -37,30 +52,89 @@ struct DynamicWrapper{T <: PSY.DynamicInjection}
     global_index::Base.ImmutableDict{Symbol, Int}
     component_state_mapping::Base.ImmutableDict{Int, Vector{Int}}
     input_port_mapping::Base.ImmutableDict{Int, Vector{Int}}
+    ext::Dict{String, Any}
+
+    function DynamicWrapper(
+        device::T,
+        system_base_power::Float64,
+        system_base_frequency::Float64,
+        static_type::Type{<:PSY.StaticInjection},
+        bus_category::Type{<:BusCategory},
+        connection_status::Base.RefValue{Float64},
+        V_ref::Base.RefValue{Float64},
+        ω_ref::Base.RefValue{Float64},
+        P_ref::Base.RefValue{Float64},
+        Q_ref::Base.RefValue{Float64},
+        inner_vars_index,
+        ix_range,
+        ode_range,
+        bus_ix::Int,
+        global_index::Base.ImmutableDict{Symbol, Int},
+        component_state_mapping::Base.ImmutableDict{Int, Vector{Int}},
+        input_port_mapping::Base.ImmutableDict{Int, Vector{Int}},
+        ext::Dict{String, Any},
+    ) where {T <: PSY.DynamicInjection}
+        isvalid_device(device)
+
+        new{T}(
+            device,
+            system_base_power,
+            system_base_frequency,
+            static_type,
+            bus_category,
+            connection_status,
+            V_ref,
+            ω_ref,
+            P_ref,
+            Q_ref,
+            Vector{Int}(inner_vars_index),
+            Vector{Int}(ix_range),
+            Vector{Int}(ode_range),
+            bus_ix,
+            global_index,
+            component_state_mapping,
+            input_port_mapping,
+            ext,
+        )
+    end
+end
+
+function state_port_mappings(
+    dynamic_device::T,
+    device_states,
+) where {T <: Union{PSY.DynamicGenerator, PSY.DynamicInverter}}
+    component_state_mapping = Dict{Int, Vector{Int}}()
+    input_port_mapping = Dict{Int, Vector{Int}}()
+    for c in PSY.get_dynamic_components(dynamic_device)
+        ix = index(typeof(c))
+        component_state_mapping[ix] = _index_local_states(c, device_states)
+        input_port_mapping[ix] = _index_port_mapping!(c, device_states)
+    end
+    return (component_state_mapping, input_port_mapping)
+end
+
+function state_port_mappings(dynamic_device::PSY.DynamicInjection, device_states)
+    component_state_mapping = Dict{Int, Vector{Int}}()
+    input_port_mapping = Dict{Int, Vector{Int}}()
+    return (component_state_mapping, input_port_mapping)
 end
 
 function DynamicWrapper(
     device::T,
+    dynamic_device::D,
     bus_ix::Int,
     ix_range,
     ode_range,
     inner_var_range,
     sys_base_power,
     sys_base_freq,
-) where {T <: PSY.Device}
-    dynamic_device = PSY.get_dynamic_injector(device)
-    @assert dynamic_device !== nothing
+) where {T <: PSY.StaticInjection, D <: PSY.DynamicInjection}
     device_states = PSY.get_states(dynamic_device)
-    component_state_mapping = Dict{Int, Vector{Int}}()
-    input_port_mapping = Dict{Int, Vector{Int}}()
 
-    for c in PSY.get_dynamic_components(dynamic_device)
-        ix = index(typeof(c))
-        component_state_mapping[ix] = _index_local_states(c, device_states)
-        input_port_mapping[ix] = _index_port_mapping!(c, device_states)
-    end
+    component_state_mapping, input_port_mapping =
+        state_port_mappings(dynamic_device, device_states)
 
-    return DynamicWrapper{typeof(dynamic_device)}(
+    return DynamicWrapper(
         dynamic_device,
         sys_base_power,
         sys_base_freq,
@@ -78,27 +152,29 @@ function DynamicWrapper(
         Base.ImmutableDict(
             sort!(device_states .=> ix_range, by = x -> x.second, rev = true)...,
         ),
+        isempty(component_state_mapping) ? Base.ImmutableDict{Int, Vector{Int}}() :
         Base.ImmutableDict(component_state_mapping...),
+        isempty(input_port_mapping) ? Base.ImmutableDict{Int, Vector{Int}}() :
         Base.ImmutableDict(input_port_mapping...),
+        Dict{String, Any}(),
     )
 end
 
 function DynamicWrapper(
     device::PSY.Source,
+    dynamic_device::D,
     bus_ix::Int,
     ix_range,
     ode_range,
     inner_var_range,
     sys_base_power,
     sys_base_freq,
-)
-    dynamic_device = PSY.get_dynamic_injector(device)
-    @assert dynamic_device !== nothing
+) where {D <: PSY.DynamicInjection}
     device_states = PSY.get_states(dynamic_device)
     IS.@assert_op PSY.get_X_th(dynamic_device) == PSY.get_X_th(device)
     IS.@assert_op PSY.get_R_th(dynamic_device) == PSY.get_R_th(device)
 
-    return DynamicWrapper{typeof(dynamic_device)}(
+    return DynamicWrapper(
         dynamic_device,
         sys_base_power,
         sys_base_freq,
@@ -116,6 +192,7 @@ function DynamicWrapper(
         Base.ImmutableDict(Dict(device_states .=> ix_range)...),
         Base.ImmutableDict{Int, Vector{Int}}(),
         Base.ImmutableDict{Int, Vector{Int}}(),
+        Dict{String, Any}(),
     )
 end
 
@@ -152,6 +229,7 @@ get_bus_ix(wrapper::DynamicWrapper) = wrapper.bus_ix
 get_global_index(wrapper::DynamicWrapper) = wrapper.global_index
 get_component_state_mapping(wrapper::DynamicWrapper) = wrapper.component_state_mapping
 get_input_port_mapping(wrapper::DynamicWrapper) = wrapper.input_port_mapping
+get_ext(wrapper::DynamicWrapper) = wrapper.ext
 
 get_system_base_power(wrapper::DynamicWrapper) = wrapper.system_base_power
 get_system_base_frequency(wrapper::DynamicWrapper) = wrapper.system_base_frequency
@@ -196,6 +274,15 @@ PSY.get_freq_estimator(wrapper::DynamicWrapper{T}) where {T <: PSY.DynamicInvert
     wrapper.device.freq_estimator
 PSY.get_filter(wrapper::DynamicWrapper{T}) where {T <: PSY.DynamicInverter} =
     wrapper.device.filter
+
+# PSY overloads of specific Dynamic Injectors
+
+PSY.get_V_ref(wrapper::PSY.SingleCageInductionMachine) = 1.0
+PSY.get_V_ref(wrapper::PSY.SimplifiedSingleCageInductionMachine) = 1.0
+PSY.get_P_ref(wrapper::PSY.SingleCageInductionMachine) = PSY.get_τ_ref(wrapper)
+PSY.get_P_ref(wrapper::PSY.SimplifiedSingleCageInductionMachine) = PSY.get_τ_ref(wrapper)
+PSY.get_ω_ref(wrapper::PSY.SingleCageInductionMachine) = 1.0
+PSY.get_ω_ref(wrapper::PSY.SimplifiedSingleCageInductionMachine) = 1.0
 
 function get_local_state_ix(
     wrapper::DynamicWrapper,

@@ -42,6 +42,7 @@ export get_imaginary_current_series
 export get_activepower_series
 export get_reactivepower_series
 export get_field_current_series
+export get_field_voltage_series
 export get_setpoints
 export get_solution
 
@@ -160,6 +161,8 @@ include("post_processing/post_proc_common.jl")
 include("post_processing/post_proc_generator.jl")
 include("post_processing/post_proc_inverter.jl")
 include("post_processing/post_proc_results.jl")
+include("post_processing/post_proc_loads.jl")
+include("post_processing/post_proc_source.jl")
 
 #Utils
 include("utils/psy_utils.jl")

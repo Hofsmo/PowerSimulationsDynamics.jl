@@ -22,9 +22,10 @@ Check the [Project Section](https://github.com/NREL-SIIP/PowerSimulationsDynamic
 
 ```julia
 julia> ]
-(v1.6) pkg> add PowerSystems
-(v1.6) pkg> add PowerSimulationsDynamics
+(v1.7) pkg> add PowerSystems
+(v1.7) pkg> add PowerSimulationsDynamics
 ```
+
 ## Usage
 
 `PowerSimulationsDynamics.jl` uses [PowerSystems.jl](https://github.com/NREL/PowerSystems.jl) to handle the data used in the simulations.
@@ -40,5 +41,5 @@ Contributions to the development and enahancement of PowerSimulationsDynamics is
 
 ## License
 
-PowerSimulationsDynamics is released under a BSD [license](https://github.com/NREL/PowerSimulationsDynamics.jl/blob/master/LICENSE).
+PowerSimulationsDynamics is released under a BSD [license](https://github.com/NREL-SIIP/PowerSimulationsDynamics.jl/blob/master/LICENSE).
 PowerSimulationsDynamics has been developed as part of the Scalable Integrated Infrastructure Planning (SIIP) initiative at the U.S. Department of Energy's National Renewable Energy Laboratory ([NREL](https://www.nrel.gov/))

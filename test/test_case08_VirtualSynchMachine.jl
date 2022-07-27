@@ -38,12 +38,12 @@ Pref_change = ControlReferenceChange(1.0, case_inv, :P_ref, 0.7)
         )
 
         # Test Initial Condition
-        diff = [0.0]
+        diff_val = [0.0]
         res = get_init_values_for_comparison(sim)
         for (k, v) in test08_x0_init
-            diff[1] += LinearAlgebra.norm(res[k] - v)
+            diff_val[1] += LinearAlgebra.norm(res[k] - v)
         end
-        @test (diff[1] < 1e-3)
+        @test (diff_val[1] < 1e-3)
 
         # Obtain small signal results for initial conditions
         small_sig = small_signal_analysis(sim)
@@ -65,6 +65,7 @@ Pref_change = ControlReferenceChange(1.0, case_inv, :P_ref, 0.7)
 
         # Should return zeros and a warning
         series3 = get_field_current_series(results, "generator-102-1")
+        series4 = get_field_voltage_series(results, "generator-102-1")
 
         # Obtain PSCAD benchmark data
         M = get_csv_data(csv_file)
@@ -98,12 +99,12 @@ end
         )
 
         # Test Initial Condition
-        diff = [0.0]
+        diff_val = [0.0]
         res = get_init_values_for_comparison(sim)
         for (k, v) in test08_x0_init
-            diff[1] += LinearAlgebra.norm(res[k] - v)
+            diff_val[1] += LinearAlgebra.norm(res[k] - v)
         end
-        @test (diff[1] < 1e-3)
+        @test (diff_val[1] < 1e-3)
 
         # Obtain small signal results for initial conditions
         small_sig = small_signal_analysis(sim)

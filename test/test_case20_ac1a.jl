@@ -49,13 +49,13 @@ function test_ac1a_implicit(dyr_file, csv_file, init_cond, eigs_value)
         ) #Type of Fault
 
         # Test Initial Condition
-        diff = [0.0]
+        diff_val = [0.0]
         res = get_init_values_for_comparison(sim)
         for (k, v) in init_cond
-            diff[1] += LinearAlgebra.norm(res[k] - v)
+            diff_val[1] += LinearAlgebra.norm(res[k] - v)
         end
 
-        @test (diff[1] < 1e-3)
+        @test (diff_val[1] < 1e-3)
 
         # Obtain small signal results for initial conditions
         small_sig = small_signal_analysis(sim)
@@ -75,11 +75,13 @@ function test_ac1a_implicit(dyr_file, csv_file, init_cond, eigs_value)
         # Obtain data for voltage magnitude at bus 102
         series2 = get_voltage_magnitude_series(results, 102)
         series3 = get_field_current_series(results, "generator-102-1")
+        series4 = get_field_voltage_series(results, "generator-102-1")
         t = series[1]
         δ = series[2]
         V = series2[2]
-        # TODO: Test I_fd with PSSE
+        # TODO: Test I_fd and Vf with PSSE
         I_fd = series3[2]
+        Vf = series4[2]
 
         M = get_csv_data(csv_file)
         t_psse, δ_psse = clean_extra_timestep!(M[:, 1], M[:, 2])
@@ -115,13 +117,13 @@ function test_ac1a_mass_matrix(dyr_file, csv_file, init_cond, eigs_value)
         ) #Type of Fault
 
         # Test Initial Condition
-        diff = [0.0]
+        diff_val = [0.0]
         res = get_init_values_for_comparison(sim)
         for (k, v) in init_cond
-            diff[1] += LinearAlgebra.norm(res[k] - v)
+            diff_val[1] += LinearAlgebra.norm(res[k] - v)
         end
 
-        @test (diff[1] < 1e-3)
+        @test (diff_val[1] < 1e-3)
 
         # Obtain small signal results for initial conditions
         small_sig = small_signal_analysis(sim)
@@ -141,11 +143,13 @@ function test_ac1a_mass_matrix(dyr_file, csv_file, init_cond, eigs_value)
         # Obtain data for voltage magnitude at bus 102
         series2 = get_voltage_magnitude_series(results, 102)
         series3 = get_field_current_series(results, "generator-102-1")
+        series4 = get_field_voltage_series(results, "generator-102-1")
         t = series[1]
         δ = series[2]
         V = series2[2]
-        # TODO: Test I_fd with PSSE
+        # TODO: Test I_fd and Vf with PSSE
         I_fd = series3[2]
+        Vf = series4[2]
 
         M = get_csv_data(csv_file)
         t_psse, δ_psse = clean_extra_timestep!(M[:, 1], M[:, 2])
